@@ -1,7 +1,7 @@
 import std.stdio, std.math, std.algorithm;
-import std.array:array;
+import std.array, std.container;
 
-//http://en.wikipedia.org/wiki/Gauss%E2%80%93Newton_algorithm
+
 
 mixin template Matrix (T){
 	//In case when squre matrix
@@ -47,7 +47,27 @@ mixin template Matrix (T){
     
     //http://en.wikipedia.org/wiki/Determinant
 	double determinant(T [][] matrix){
-		return 1.1;
+		double resultvalue = 0;
+		for(int i = 0;i < matrix.length;++i){
+			T value = matrix[i][0];
+			T [][]arr = new T[][](matrix.length-1, matrix.length-1);
+			T [] temp;
+			int a = 0;
+			for(int j = 0;j < matrix.length;++j){
+				if(j == i)j+=1;
+				for(int k = 0;k < matrix.length;++k){
+					if(k == i)k+=1;
+					temp ~= matrix[j][k];
+					if(temp.length == matrix.length-1){
+						arr[a] = temp;
+						temp = [];
+						a+=1;
+					}
+				}
+			}
+			writeln(arr);
+		}
+		return resultvalue;
 	}
 }
 
@@ -106,7 +126,8 @@ void test_matrix(){
 	//writeln(transpose([[1,2,3], [4,5,6], [7,8,9]]));
 	auto data = [[1.0,2.0,3.0], [4.0,5.0,6.0], [7.0,8.0,9.0]];
 	auto values = [[3.0,2.0,8.0], [4.0,5.0,1.0], [7.0,9.0,9.0]];
-	writeln(product(data, values));
+	auto prod = product(data, values);
+	auto deter = determinant(data);
 	//writeln(product(data, 5));
 }
 
@@ -124,6 +145,6 @@ void test_gauss_newton(){
 
 void main()
 {
-	writeln(F(0.4, [2.0,3.0,2.0,1.0]));
-	//test_matrix();
+	//writeln(F(0.4, [2.0,3.0,2.0,1.0]));
+	test_matrix();
 }
