@@ -46,17 +46,18 @@ mixin template Matrix (T){
 	}
     
     //http://en.wikipedia.org/wiki/Determinant
+    //http://www.easycalculation.com/matrix/learn-matrix-determinant.php
 	double determinant(T [][] matrix){
 		double resultvalue = 0;
 		for(int i = 0;i < matrix.length;++i){
-			T value = matrix[i][0];
+			T value = matrix[0][i];
 			T [][]arr = new T[][](matrix.length-1, matrix.length-1);
 			T [] temp;
 			int a = 0;
-			for(int j = 0;j < matrix.length;++j){
-				if(j == i)j+=1;
+			for(int j = 1;j < matrix.length;++j){
 				for(int k = 0;k < matrix.length;++k){
 					if(k == i)k+=1;
+					if(k == matrix.length)break;
 					temp ~= matrix[j][k];
 					if(temp.length == matrix.length-1){
 						arr[a] = temp;
@@ -65,9 +66,21 @@ mixin template Matrix (T){
 					}
 				}
 			}
-			writeln(arr);
+		if(i == 1) resultvalue -= computeDet(arr, value);
+		else
+		resultvalue+=computeDet(arr, value);
 		}
 		return resultvalue;
+	}
+
+	// Get 2x2 matrix
+	private double computeDet(T[][]matrix, T value)
+	in{
+		assert(matrix.length == 2 && matrix[0].length);
+	  }
+	body
+	{
+		return value * (matrix[0][0] * matrix[1][1] - matrix[0][1] * matrix[1][0]);
 	}
 }
 
@@ -125,9 +138,11 @@ void test_matrix(){
 	mixin Matrix!double;
 	//writeln(transpose([[1,2,3], [4,5,6], [7,8,9]]));
 	auto data = [[1.0,2.0,3.0], [4.0,5.0,6.0], [7.0,8.0,9.0]];
+	auto data2 = [[7.0, 4.0, 5.0], [9.0,8.0,5.0], [2.0,1.0,1.0]];
 	auto values = [[3.0,2.0,8.0], [4.0,5.0,1.0], [7.0,9.0,9.0]];
 	auto prod = product(data, values);
-	auto deter = determinant(data);
+	auto deter = determinant(data2);
+	writeln(deter);
 	//writeln(product(data, 5));
 }
 
