@@ -42,6 +42,18 @@ mixin template MatrixT (T){
 		return result;
 	}
 
+	T[] product(T[][] matrix, T[] vector){
+		T[] result = new T[](matrix.length);
+		for(int i = 0;i < matrix.length;++i){
+			T value = 0;
+			for(int j = 0;j < matrix[0].length;++j){
+				value += matrix[i][j] * vector[j];
+			}
+			result[i] = value;
+		}
+		return result;
+	}
+
 	//Matrix inverse;
 	//A^-1 = 1/|A|
 	//Now, only for 3x3 case
@@ -155,6 +167,10 @@ class Matrix:IMatrix {
 		_data = data;
 	}
 
+	this(double[] data){
+
+	}
+
 	@property {
 		double [][]data(){ return _data;};
 	}
@@ -165,6 +181,11 @@ class Matrix:IMatrix {
 
 	IMatrix opMul(double [][] matr){
 		return generalProduct(matr);
+	}
+
+	IMatrix opMul(double[] vec){
+		mixin MatrixT!double;
+		return new Matrix(product(_data, vec));
 	}
 
 	private IMatrix generalProduct(double [][] matrix){
@@ -181,17 +202,18 @@ class Matrix:IMatrix {
 		mixin MatrixT!double;
 		return new Matrix(transpose(_data));
 	}
+
+	//Compute Jacobian of Matrix
+	IMatrix jacobian(double input, double function(double, double[]) func){
+		auto matrix = _data;
+		for(int i = 0;i < matrix.length;++i){
+			for(int j = 1;j <= matrix.length;++j)
+				matrix[i][j] = Derivative(matrix[i], matrix[i], input, func, j);
+		}
+		return new Matrix(matrix);
+	}
 }
 
-//Compute Jacobian Matrix
-double[][] Jacobian(double[][]matrix, double input,double function(double, double[]) func)
-{
-	for(int i = 0;i < matrix.length;++i){
-		for(int j = 1;j <= matrix.length;++j)
-			matrix[i][j] = Derivative(matrix[i], matrix[i], input, func, j);
-	}
-	return matrix;
-}
 
 //http://en.wikipedia.org/wiki/Derivative
 double Derivative(double []values1, double [] values2, double input, 
@@ -224,19 +246,24 @@ double GaussNewton(int iterations, double input[], double observed[], double[][]
 	double result = 0;
 	double minerror = 10000000000;
 	for(int i = 0;i < iterations;++i){
+		auto param1 = new double[observed.length];
+		double valueres = 0;
+		double result1 = 0;
 		for(int j = 0;j < m;++j){
-			//x_j + 1 = x_j - H * grad(f(x*))
-			double param1 = observed[j] - func(input[j], values);
-			result += pow(param1,2);
-			/*for(int k = 0;k < input.length;++k)
-				auto newmatrix = Jacobian(matrix, input[k], func);*/
+			valueres = observed[j] - func(input[j], values);
+			result1 += pow(valueres, 2);
+			//valueres = pow(valueres,2);
+			for(int k = 0;k < input.length;++k)
+				auto newmatrix = matr.jacobian(input[k], func);
 		}
+		param1[i] = valueres;
 		if(result < minerror){
 			minerror = result;
 		}
 		auto value = matr * matr.T();
 		auto value2 = value.inv();
-		auto newjacobian1 = (value2 * matr.T()) * value2;
+		//need m-v product
+		auto ee = ((value2 * matr.T()) * value2) * param1;
 	}
 	return minerror;
 }
@@ -251,7 +278,7 @@ void test_matrix(){
 
 	auto m = new Matrix(data);
 	auto m2 = m * data2;
-	writeln(m2.data);
+	//writeln(m2.data);
 }
 
 double F(double inpvalue, double []values){
