@@ -6,7 +6,7 @@ import std.array, std.container;
 //http://en.wikipedia.org/wiki/Gauss%E2%80%93Newton_algorithm
 //http://nghiaho.com/?page_id=355
 
-mixin template Matrix (T){
+mixin template MatrixT (T){
 	//In case when squre matrix
 	T[][] transpose(T [][] matrix)
         in
@@ -138,6 +138,51 @@ mixin template Matrix (T){
 	}
 }
 
+interface IMatrix
+{
+	IMatrix opMul(IMatrix);
+	IMatrix opMul(double[][]);
+	IMatrix inv();
+	IMatrix T();
+	@property {
+		double [][]data();
+	}
+}
+
+class Matrix:IMatrix {
+	private double[][]_data;
+	this(double[][]data){
+		_data = data;
+	}
+
+	@property {
+		double [][]data(){ return _data;};
+	}
+
+	IMatrix opMul(IMatrix matr){
+		return generalProduct(matr.data);
+	}
+
+	IMatrix opMul(double [][] matr){
+		return generalProduct(matr);
+	}
+
+	private IMatrix generalProduct(double [][] matrix){
+		mixin MatrixT!double;
+		return new Matrix(product(_data, matrix));
+	}
+
+	IMatrix inv(){
+		mixin MatrixT!double;
+		return new Matrix(inverse(_data));
+	}
+
+	IMatrix T(){
+		mixin MatrixT!double;
+		return new Matrix(transpose(_data));
+	}
+}
+
 //Compute Jacobian Matrix
 double[][] Jacobian(double[][]matrix, double input,double function(double, double[]) func)
 {
@@ -155,13 +200,13 @@ double Derivative(double []values1, double [] values2, double input,
 	double result1 = func(input, values1);
 	double result2 = func(input, values2);
 	return (result1 - result2)/size;
-	//return (F(matrix) - F(matrix2))/matrix.length;
+	//return (F(matrix) - F(matrix2Matrix))/matrix.length;
 }
 
 
 //TODO
 double[][] JacobianResult(double[][]matrix, double inputvalue, double setvalue){
-	mixin Matrix!double;
+	mixin MatrixT!double;
 	return product(transpose(matrix), matrix);
 }
 
@@ -172,9 +217,8 @@ double GaussNewton(int iterations, double input[], double observed[], double[][]
 		assert(input.length == observed.length);
 	}
 	body{
-
+	auto matr = new Matrix(matrix);
 	double[][] Jacobian;
-	mixin Matrix!double;
 	int m = matrix.length;
 	int n = matrix[0].length;
 	double result = 0;
@@ -184,29 +228,30 @@ double GaussNewton(int iterations, double input[], double observed[], double[][]
 			//x_j + 1 = x_j - H * grad(f(x*))
 			double param1 = observed[j] - func(input[j], values);
 			result += pow(param1,2);
-			for(int k = 0;k < input.length;++k)
-				auto newmatrix = Jacobian(matrix, input[k], func);
+			/*for(int k = 0;k < input.length;++k)
+				auto newmatrix = Jacobian(matrix, input[k], func);*/
 		}
 		if(result < minerror){
 			minerror = result;
 		}
-		double [][] newjacobian1 = inverse(product(matrix, transpose(matrix)));
-		matrix = product(product(newjacobian1, transpose(matrix)), newjacobian1);
+		auto value = matr * matr.T();
+		auto value2 = value.inv();
+		auto newjacobian1 = (value2 * matr.T()) * value2;
 	}
 	return minerror;
 }
 
 void test_matrix(){
-	mixin Matrix!double;
 	//writeln(transpose([[1,2,3], [4,5,6], [7,8,9]]));
 	auto data = [[1.0,2.0,3.0], [4.0,5.0,6.0], [7.0,8.0,9.0]];
 	auto data2 = [[7.0,4.0, 5.0], 
 				 [9.0,8.0,5.0], 
 				 [2.0,1.0,1.0]];
 	auto values = [[3.0,2.0,8.0], [4.0,5.0,1.0], [7.0,9.0,9.0]];
-	auto prod = product(data, values);
-	auto deter = determinant(data2);
-	auto min = adjoint(data2);
+
+	auto m = new Matrix(data);
+	auto m2 = m * data2;
+	writeln(m2.data);
 }
 
 double F(double inpvalue, double []values){
