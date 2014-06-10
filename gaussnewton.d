@@ -171,6 +171,10 @@ class Matrix:IMatrix {
 
 	}
 
+	this(int count){
+		_data = new double[][](count, count);
+	}
+
 	@property {
 		double [][]data(){ return _data;};
 	}
@@ -234,34 +238,33 @@ double[][] JacobianResult(double[][]matrix, double inputvalue, double setvalue){
 
 
 
-double GaussNewton(int iterations, double input[], double observed[], double[][] matrix, 
-	double function(double, double[]) func, double[] values)
+double GaussNewton(int iterations, double input[], double observed[], uint[string] data,
+	double function(double, uint[string]) func)
 	in{
 		assert(input.length == observed.length);
 	}
 	body{
-	auto matr = new Matrix(matrix);
+	int m = input.length;
+	auto matr = new Matrix(m);
 	double[][] Jacobian;
-	int m = matrix.length;
-	int n = matrix[0].length;
 	double result = 0;
 	double minerror = 10000000000;
 	for(int i = 0;i < iterations;++i){
 		auto param1 = new double[observed.length];
-		double valueres = 0;
-		double result1 = 0;
+		double[] rdata = new double[m];
+		double error = 0;
 		for(int j = 0;j < m;++j){
-			valueres = observed[j] - func(input[j], values);
-			result1 += pow(valueres, 2);
+			rdata[j] = observed[j] - func(input[j], data);
+			error += (rdata[j] * rdata[j]);
 			for(int k = 0;k < input.length;++k)
 				auto newmatrix = matr.jacobian(input[k], func);
 		}
-		param1[i] = valueres;
+		/*param1[i] = valueres;
 		if(result < minerror){
 			minerror = result;
 		}
 		auto value = matr * matr.T();
-		auto value2 = value.inv();
+		auto value2 = value.inv();*/
 		//need m-v product
 		//auto ee = ((value2 * matr.T()) * value2) * param1;
 	}
@@ -289,8 +292,11 @@ double F(double inpvalue, double []values){
 	return a * cos(b * inpvalue) + c * sin(d * inpvalue);
 }
 
-double targetFunc(double value){
-	return cos(value);
+double targetFunc(double value, uint[string] data){
+	uint a = data["A"];
+	uint b = data["B"];
+	uint c = data["C"];
+	return a * cos(b * value) + sin(c * value);
 }
 
 double[] generateData(int count){
@@ -298,22 +304,27 @@ double[] generateData(int count){
 	return map!(x => uniform(-50.0, 50.0))(v).array;
 }
 
-double[] generateOutputdata(double function(double) func, int count){
+double[] generateOutputdata(double function(double, uint[string]) func, uint[string] data, int count){
 	double[]o = new double[count];
 	for(int i = 0;i < count;++i){
-		//o[i] = func(i);
+		o[i] = func(i, data);
 	}
 	return o;
 }
 
 void test_gauss_newton(){
-	double[] data = generateData(100);
-	//writeln(typeof (targetFunc));
-	auto otp = generateOutputdata((double x) => x,100);
+	uint[string] data;
+	data["A"] = 5;
+	data["B"] = 2;
+	data["C"] = 7;
+	double[] gendata = generateData(100);
+	//auto otp = generateOutputdata((double x) => cast(double)cos(x),100);
+	auto otp = generateOutputdata(&targetFunc, data, 100);
+	auto result = GaussNewton(200, gendata, otp, data, &targetFunc);
 }
 
 void main()
 {
 	//writeln(F(0.4, [2.0,3.0,2.0,1.0]));
-	test_matrix();
+	test_gauss_newton();
 }
