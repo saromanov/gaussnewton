@@ -1,5 +1,5 @@
 import std.stdio, std.math, std.algorithm;
-import std.array, std.container;
+import std.array, std.container, std.random;
 
 
 //To remove
@@ -233,6 +233,7 @@ double[][] JacobianResult(double[][]matrix, double inputvalue, double setvalue){
 }
 
 
+
 double GaussNewton(int iterations, double input[], double observed[], double[][] matrix, 
 	double function(double, double[]) func, double[] values)
 	in{
@@ -252,7 +253,6 @@ double GaussNewton(int iterations, double input[], double observed[], double[][]
 		for(int j = 0;j < m;++j){
 			valueres = observed[j] - func(input[j], values);
 			result1 += pow(valueres, 2);
-			//valueres = pow(valueres,2);
 			for(int k = 0;k < input.length;++k)
 				auto newmatrix = matr.jacobian(input[k], func);
 		}
@@ -263,7 +263,7 @@ double GaussNewton(int iterations, double input[], double observed[], double[][]
 		auto value = matr * matr.T();
 		auto value2 = value.inv();
 		//need m-v product
-		auto ee = ((value2 * matr.T()) * value2) * param1;
+		//auto ee = ((value2 * matr.T()) * value2) * param1;
 	}
 	return minerror;
 }
@@ -289,8 +289,27 @@ double F(double inpvalue, double []values){
 	return a * cos(b * inpvalue) + c * sin(d * inpvalue);
 }
 
+double targetFunc(double value){
+	return cos(value);
+}
+
+double[] generateData(int count){
+	double[]v = new double[count];
+	return map!(x => uniform(-50.0, 50.0))(v).array;
+}
+
+double[] generateOutputdata(double function(double) func, int count){
+	double[]o = new double[count];
+	for(int i = 0;i < count;++i){
+		//o[i] = func(i);
+	}
+	return o;
+}
+
 void test_gauss_newton(){
-	
+	double[] data = generateData(100);
+	//writeln(typeof (targetFunc));
+	auto otp = generateOutputdata((double x) => x,100);
 }
 
 void main()
