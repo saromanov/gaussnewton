@@ -4,11 +4,16 @@ import std.array, std.container, std.random;
 
 //To remove
 //http://en.wikipedia.org/wiki/Gauss%E2%80%93Newton_algorithm
-//http://nghiaho.com/?page_id=355
+
+
+const float epsilon = 1e-4;
+const float STEP = 1e-5;
+alias uint[string] VARS; //Variables
 
 mixin template MatrixT (T){
+	alias T[][] MT; //Matrix type
 	//In case when squre matrix
-	T[][] transpose(T [][] matrix)
+	MT transpose(T [][] matrix)
         in
         {
         	assert(matrix.length > 0 && matrix[0].length > 0 
@@ -25,11 +30,11 @@ mixin template MatrixT (T){
 		return result;
 	}
 
-	T[][] product(ref T[][] matrix, T number){
+	MT product(ref T[][] matrix, T number){
 		return map!(x => map!(y => y * number)(x).array)(matrix).array;
 	}
 
-	T[][] product(T[][] matrix, T[][] values){
+	MT product(T[][] matrix, T[][] values){
 		T [][] result = new T[][](matrix.length, matrix[0].length);
 		for(int i = 0;i < matrix.length;++i){
 			for(int j = 0;j < matrix[i].length;++j){
@@ -42,7 +47,7 @@ mixin template MatrixT (T){
 		return result;
 	}
 
-	T[] product(T[][] matrix, T[] vector){
+	T[] product(MT matrix, T[] vector){
 		T[] result = new T[](matrix.length);
 		for(int i = 0;i < matrix.length;++i){
 			T value = 0;
@@ -63,7 +68,7 @@ mixin template MatrixT (T){
 	}
 
 
-	T[][] minor(T[][] matrix){
+	MT minor(T[][] matrix){
 		T[][] result = new T[][](matrix.length, matrix.length);
 		for(int p = 0;p < matrix.length;++p){
 			for(int i = 0;i < matrix.length;++i){
@@ -120,7 +125,7 @@ mixin template MatrixT (T){
 	}
 
 	//Find adjoint of a matrix where AB = I
-	T[][] adjoint(T[][] matrix){
+	MT adjoint(T[][] matrix){
 		T[][]min = minor(matrix);
 		for(int i = 1;i <= min.length;++i){
 			for(int j = 1;j <= min.length;++j){
@@ -208,25 +213,29 @@ class Matrix:IMatrix {
 	}
 
 	//Compute Jacobian of Matrix
-	IMatrix jacobian(double input, double function(double, double[]) func){
-		auto matrix = _data;
-		for(int i = 0;i < matrix.length;++i){
-			for(int j = 1;j <= matrix.length;++j)
-				matrix[i][j] = Derivative(matrix[i], matrix[i], input, func, j);
+	/*Matrix jacobian(double input, VARS data,
+		double function(double, VARS data) func, int j){
+		for(int i = 0;i < data.keys.length;++i){
+			 data[j]  += 1;
+			_data[i][j] = Derivative(input, func, data1, data2);
 		}
-		return new Matrix(matrix);
-	}
+		return new Matrix(_data);
+	}*/
 }
 
 
 //http://en.wikipedia.org/wiki/Derivative
-double Derivative(double []values1, double [] values2, double input, 
-	double function(double, double[]) func, int size){
+double Derivative(double[]input, 
+	double function(double, VARS) func, VARS data1, VARS data2){
+	double result1 = func(input[0], data1);
+	double result2 = func(input[0], data2);
+	return (result1 - result2)/epsilon;
+}
 
-	double result1 = func(input, values1);
-	double result2 = func(input, values2);
-	return (result1 - result2)/size;
-	//return (F(matrix) - F(matrix2Matrix))/matrix.length;
+
+
+void changeParameters(uint[string] params){
+
 }
 
 
@@ -246,7 +255,7 @@ double GaussNewton(int iterations, double input[], double observed[], uint[strin
 	body{
 	int m = input.length;
 	auto matr = new Matrix(m);
-	double[][] Jacobian;
+	double[][] jacobi = new double[][](m, data.keys.length);
 	double result = 0;
 	double minerror = 10000000000;
 	for(int i = 0;i < iterations;++i){
@@ -256,15 +265,24 @@ double GaussNewton(int iterations, double input[], double observed[], uint[strin
 		for(int j = 0;j < m;++j){
 			rdata[j] = observed[j] - func(input[j], data);
 			error += (rdata[j] * rdata[j]);
-			for(int k = 0;k < input.length;++k)
-				auto newmatrix = matr.jacobian(input[k], func);
+			int c = 0;
+			foreach(key;data.keys){
+			 	data[key]  += STEP;
+			 	auto data1 = data;
+			 	data[key] -= STEP;
+			 	auto data2 = data;
+				jacobi[j][c] = Derivative(input, func, data1, data2);
+				c += 1;
+			}
+			writeln(jacobi);
 		}
-		/*param1[i] = valueres;
-		if(result < minerror){
-			minerror = result;
+
+		matr = new Matrix(jacobi);
+		if(error < minerror){
+			minerror = error;
 		}
 		auto value = matr * matr.T();
-		auto value2 = value.inv();*/
+		auto value2 = value.inv();
 		//need m-v product
 		//auto ee = ((value2 * matr.T()) * value2) * param1;
 	}
@@ -314,6 +332,8 @@ double[] generateOutputdata(double function(double, uint[string]) func, uint[str
 
 void test_gauss_newton(){
 	uint[string] data;
+
+	//Initial values
 	data["A"] = 5;
 	data["B"] = 2;
 	data["C"] = 7;
