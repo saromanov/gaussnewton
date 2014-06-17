@@ -8,7 +8,7 @@ import std.array, std.container, std.random;
 
 const float epsilon = 1e-4;
 const float STEP = 1e-5;
-alias uint[string] VARS; //Variables
+alias float[string] VARS; //Variables
 
 mixin template MatrixT (T){
 	alias T[][] MT; //Matrix type
@@ -234,7 +234,7 @@ double Derivative(double[]input,
 
 
 
-void changeParameters(uint[string] params){
+void changeParameters(VARS params){
 
 }
 
@@ -247,8 +247,8 @@ double[][] JacobianResult(double[][]matrix, double inputvalue, double setvalue){
 
 
 
-double GaussNewton(int iterations, double input[], double observed[], uint[string] data,
-	double function(double, uint[string]) func)
+double GaussNewton(int iterations, double input[], double observed[], float[string] data,
+	double function(double, float[string]) func, float step)
 	in{
 		assert(input.length == observed.length);
 	}
@@ -262,19 +262,16 @@ double GaussNewton(int iterations, double input[], double observed[], uint[strin
 		auto param1 = new double[observed.length];
 		double[] rdata = new double[m];
 		double error = 0;
+		auto vars1 = data.dup;
 		for(int j = 0;j < m;++j){
 			rdata[j] = observed[j] - func(input[j], data);
 			error += (rdata[j] * rdata[j]);
 			int c = 0;
 			foreach(key;data.keys){
-			 	data[key]  += STEP;
-			 	auto data1 = data;
-			 	data[key] -= STEP;
-			 	auto data2 = data;
-				jacobi[j][c] = Derivative(input, func, data1, data2);
+			 	vars1[key]  += STEP;
+				jacobi[j][c] = Derivative(input, func, vars1, data);
 				c += 1;
 			}
-			writeln(jacobi);
 		}
 
 		matr = new Matrix(jacobi);
@@ -284,13 +281,12 @@ double GaussNewton(int iterations, double input[], double observed[], uint[strin
 		auto value = matr * matr.T();
 		auto value2 = value.inv();
 		//need m-v product
-		//auto ee = ((value2 * matr.T()) * value2) * param1;
+		auto ee = ((value2 * matr.T()) * value2) * rdata;
 	}
 	return minerror;
 }
 
 void test_matrix(){
-	//writeln(transpose([[1,2,3], [4,5,6], [7,8,9]]));
 	auto data = [[1.0,2.0,3.0], [4.0,5.0,6.0], [7.0,8.0,9.0]];
 	auto data2 = [[7.0,4.0, 5.0], 
 				 [9.0,8.0,5.0], 
@@ -299,7 +295,6 @@ void test_matrix(){
 
 	auto m = new Matrix(data);
 	auto m2 = m * data2;
-	//writeln(m2.data);
 }
 
 double F(double inpvalue, double []values){
@@ -310,10 +305,10 @@ double F(double inpvalue, double []values){
 	return a * cos(b * inpvalue) + c * sin(d * inpvalue);
 }
 
-double targetFunc(double value, uint[string] data){
-	uint a = data["A"];
-	uint b = data["B"];
-	uint c = data["C"];
+double targetFunc(double value, VARS data){
+	float a = data["A"];
+	float b = data["B"];
+	float c = data["C"];
 	return a * cos(b * value) + sin(c * value);
 }
 
@@ -322,7 +317,7 @@ double[] generateData(int count){
 	return map!(x => uniform(-50.0, 50.0))(v).array;
 }
 
-double[] generateOutputdata(double function(double, uint[string]) func, uint[string] data, int count){
+double[] generateOutputdata(double function(double, VARS) func, VARS data, int count){
 	double[]o = new double[count];
 	for(int i = 0;i < count;++i){
 		o[i] = func(i, data);
@@ -331,16 +326,16 @@ double[] generateOutputdata(double function(double, uint[string]) func, uint[str
 }
 
 void test_gauss_newton(){
-	uint[string] data;
+	float[string] data;
 
 	//Initial values
-	data["A"] = 5;
-	data["B"] = 2;
-	data["C"] = 7;
-	double[] gendata = generateData(100);
+	data["A"] = 5.0;
+	data["B"] = 2.0;
+	data["C"] = 7.0;
+	double[] gendata = generateData(3);
 	//auto otp = generateOutputdata((double x) => cast(double)cos(x),100);
-	auto otp = generateOutputdata(&targetFunc, data, 100);
-	auto result = GaussNewton(200, gendata, otp, data, &targetFunc);
+	auto otp = generateOutputdata(&targetFunc, data, 3);
+	auto result = GaussNewton(200, gendata, otp, data, &targetFunc, epsilon);
 }
 
 void main()
