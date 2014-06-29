@@ -9,6 +9,7 @@ import std.array, std.container, std.random;
 const float epsilon = 1e-4;
 const float STEP = 1e-5;
 alias float[string] VARS; //Variables
+alias double function(double, float[string]) DFUNC;
 
 mixin template MatrixT (T){
 	alias T[][] MT; //Matrix type
@@ -159,6 +160,7 @@ interface IMatrix
 {
 	IMatrix opMul(IMatrix);
 	IMatrix opMul(double[][]);
+	IMatrix opMul(double[]);
 	IMatrix inv();
 	IMatrix T();
 	@property {
@@ -280,10 +282,37 @@ double GaussNewton(int iterations, double input[], double observed[], float[stri
 		}
 		auto value = matr * matr.T();
 		auto value2 = value.inv();
-		//need m-v product
+
+		//Parameters for update
+		//TODO fix m-v product
 		auto ee = ((value2 * matr.T()) * value2) * rdata;
 	}
 	return minerror;
+}
+
+class Gauss_Newton {
+	private int iters;
+	private float[string] variables;
+	DFUNC _func;
+	this(int iters){
+		iters = iters;
+	}
+
+	//Steb by step work of Gauss-Newton algorithm
+	static void test_load(){
+
+	}
+
+	void addVariable(string name, float value){
+		variables[name] = value;
+	}
+
+	void addFuncs(DFUNC func){
+		_func = func;
+	}
+	string[] showVariables(){
+		return variables.keys;
+	}
 }
 
 void test_matrix(){
@@ -330,13 +359,16 @@ void test_gauss_newton(){
 
 	//Initial values
 	data["A"] = 5.0;
-	data["B"] = 2.0;
+	data["B"] = 3.0;
 	data["C"] = 7.0;
 	double[] gendata = generateData(3);
 	//auto otp = generateOutputdata((double x) => cast(double)cos(x),100);
 	auto otp = generateOutputdata(&targetFunc, data, 3);
 	auto result = GaussNewton(200, gendata, otp, data, &targetFunc, epsilon);
 }
+
+//Подготовка dub
+//http://habrahabr.ru/post/226301/
 
 void main()
 {
