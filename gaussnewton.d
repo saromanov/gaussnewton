@@ -1,5 +1,5 @@
 import std.stdio, std.math, std.algorithm;
-import std.array, std.container, std.random;
+import std.array, std.container, std.random, std.range;
 
 
 //To remove
@@ -175,7 +175,8 @@ class Matrix:IMatrix {
 	}
 
 	this(double[] data){
-
+		_data = new double[][](1, data.length);
+		_data[0] = data;
 	}
 
 	this(int count){
@@ -249,7 +250,7 @@ double[][] JacobianResult(double[][]matrix, double inputvalue, double setvalue){
 
 
 
-double GaussNewton(int iterations, double input[], double observed[], float[string] data,
+double GaussNewtonImpl(int iterations, double input[], double observed[], float[string] data,
 	double function(double, float[string]) func, float step)
 	in{
 		assert(input.length == observed.length);
@@ -260,6 +261,7 @@ double GaussNewton(int iterations, double input[], double observed[], float[stri
 	double[][] jacobi = new double[][](m, data.keys.length);
 	double result = 0;
 	double minerror = 10000000000;
+	double[][]bvalues = new double[][](iterations, iterations);
 	for(int i = 0;i < iterations;++i){
 		auto param1 = new double[observed.length];
 		double[] rdata = new double[m];
@@ -285,17 +287,24 @@ double GaussNewton(int iterations, double input[], double observed[], float[stri
 
 		//Parameters for update
 		//TODO fix m-v product
-		auto ee = ((value2 * matr.T()) * value2) * rdata;
+		bvalues[i+1] = ((((value2 * matr.T()) * value2) * rdata).data[0]);
 	}
 	return minerror;
 }
 
-class Gauss_Newton {
-	private int iters;
-	private float[string] variables;
+
+double[] generateOutputdata(double function(double, VARS) func, VARS data, int count){
+	double[]o = new double[count];
+	for(int i = 0;i < count;++i){
+		o[i] = func(i, data);
+	}
+	return o;
+}
+
+class GaussNewton {
+	private VARS variables;
 	DFUNC _func;
-	this(int iters){
-		iters = iters;
+	this(){
 	}
 
 	//Steb by step work of Gauss-Newton algorithm
@@ -312,6 +321,14 @@ class Gauss_Newton {
 	}
 	string[] showVariables(){
 		return variables.keys;
+	}
+
+	double run(double[]data, int iters){
+		if(_func != null && variables.length > 0){
+			auto gens = generateOutputdata(_func, variables, 3);
+			return GaussNewtonImpl(iters, data, gens, variables, _func, epsilon);
+		}
+		return 0;
 	}
 }
 
@@ -346,32 +363,11 @@ double[] generateData(int count){
 	return map!(x => uniform(-50.0, 50.0))(v).array;
 }
 
-double[] generateOutputdata(double function(double, VARS) func, VARS data, int count){
-	double[]o = new double[count];
-	for(int i = 0;i < count;++i){
-		o[i] = func(i, data);
-	}
-	return o;
-}
 
-void test_gauss_newton(){
-	float[string] data;
-
-	//Initial values
-	data["A"] = 5.0;
-	data["B"] = 3.0;
-	data["C"] = 7.0;
-	double[] gendata = generateData(3);
-	//auto otp = generateOutputdata((double x) => cast(double)cos(x),100);
-	auto otp = generateOutputdata(&targetFunc, data, 3);
-	auto result = GaussNewton(200, gendata, otp, data, &targetFunc, epsilon);
-}
-
-//Подготовка dub
-//http://habrahabr.ru/post/226301/
 
 void main()
 {
 	//writeln(F(0.4, [2.0,3.0,2.0,1.0]));
 	test_gauss_newton();
+	//test_mv_product();
 }
