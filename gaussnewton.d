@@ -1,8 +1,8 @@
+module gaussnewton;
+
 import std.stdio, std.math, std.algorithm;
 import std.array, std.container, std.random, std.range;
 
-
-//To remove
 //http://en.wikipedia.org/wiki/Gauss%E2%80%93Newton_algorithm
 
 
@@ -261,7 +261,8 @@ double GaussNewtonImpl(int iterations, double input[], double observed[], float[
 	double[][] jacobi = new double[][](m, data.keys.length);
 	double result = 0;
 	double minerror = 10000000000;
-	double[][]bvalues = new double[][](iterations, iterations);
+	double[][]bvalues = new double[][](iterations+1, iterations+1);
+	bvalues[0] = [0.85,0.50,-0.30];
 	for(int i = 0;i < iterations;++i){
 		auto param1 = new double[observed.length];
 		double[] rdata = new double[m];
@@ -287,9 +288,17 @@ double GaussNewtonImpl(int iterations, double input[], double observed[], float[
 
 		//Parameters for update
 		//TODO fix m-v product
-		bvalues[i+1] = ((((value2 * matr.T()) * value2) * rdata).data[0]);
+		bvalues[i+1] = add(bvalues[i], ((((value2 * matr.T()) * value2) * rdata).data[0]));
+		writeln(bvalues[i+1]);
 	}
 	return minerror;
+}
+
+double[] add(double[]data1, double[]data2){
+	double[] res = new double[](data1.length);
+	for(int i = 0;i < data1.length;++i)
+		res[i] = data1[i] + data2[i];
+	return res;
 }
 
 
@@ -301,28 +310,49 @@ double[] generateOutputdata(double function(double, VARS) func, VARS data, int c
 	return o;
 }
 
-class GaussNewton {
+
+interface IGaussNewton{
+	void addVariable(string name, float value);
+	void addFuncs(DFUNC func);
+	IGaussNewton addVariableF(string name, float value);
+	string[] showVariables();
+	double run(double[]data, int iters);
+}
+
+class GaussNewton:IGaussNewton {
 	private VARS variables;
 	DFUNC _func;
 	this(){
 	}
 
-	//Steb by step work of Gauss-Newton algorithm
-	static void test_load(){
-
+	//Append variable
+	this(VARS variables2){
+		variables = variables2;
 	}
 
+	//Append variable for compute target function.
+	//Of course, depends of numbers on var-s on this function
 	void addVariable(string name, float value){
 		variables[name] = value;
 	}
 
+	IGaussNewton addVariableF(string name, float value){
+		variables[name] = value;
+		return new GaussNewton(variables);
+	}
+
+	//Add target function
 	void addFuncs(DFUNC func){
 		_func = func;
 	}
+
+	//Show variables which was add on addVariables
 	string[] showVariables(){
 		return variables.keys;
 	}
 
+
+	//"heart" of this class. Run G-N algorithm
 	double run(double[]data, int iters){
 		if(_func != null && variables.length > 0){
 			auto gens = generateOutputdata(_func, variables, 3);
@@ -332,42 +362,6 @@ class GaussNewton {
 	}
 }
 
-void test_matrix(){
-	auto data = [[1.0,2.0,3.0], [4.0,5.0,6.0], [7.0,8.0,9.0]];
-	auto data2 = [[7.0,4.0, 5.0], 
-				 [9.0,8.0,5.0], 
-				 [2.0,1.0,1.0]];
-	auto values = [[3.0,2.0,8.0], [4.0,5.0,1.0], [7.0,9.0,9.0]];
-
-	auto m = new Matrix(data);
-	auto m2 = m * data2;
-}
-
-double F(double inpvalue, double []values){
-	double a = values[0];
-	double b = values[1];
-	double c = values[2];
-	double d = values[3];
-	return a * cos(b * inpvalue) + c * sin(d * inpvalue);
-}
-
-double targetFunc(double value, VARS data){
-	float a = data["A"];
-	float b = data["B"];
-	float c = data["C"];
-	return a * cos(b * value) + sin(c * value);
-}
-
-double[] generateData(int count){
-	double[]v = new double[count];
-	return map!(x => uniform(-50.0, 50.0))(v).array;
-}
 
 
 
-void main()
-{
-	//writeln(F(0.4, [2.0,3.0,2.0,1.0]));
-	test_gauss_newton();
-	//test_mv_product();
-}
