@@ -2,6 +2,8 @@ module gaussnewton;
 
 import std.stdio, std.math, std.algorithm;
 import std.array, std.container, std.random, std.range;
+import std.file;
+import std.conv;
 
 //http://en.wikipedia.org/wiki/Gauss%E2%80%93Newton_algorithm
 
@@ -250,7 +252,7 @@ double[][] JacobianResult(double[][]matrix, double inputvalue, double setvalue){
 
 
 
-double GaussNewtonImpl(int iterations, double input[], double observed[], float[string] data,
+double[] GaussNewtonImpl(int iterations, double input[], double observed[], float[string] data,
 	double function(double, float[string]) func, float step)
 	in{
 		assert(input.length == observed.length);
@@ -289,9 +291,8 @@ double GaussNewtonImpl(int iterations, double input[], double observed[], float[
 		//Parameters for update
 		//TODO fix m-v product
 		bvalues[i+1] = add(bvalues[i], ((((value2 * matr.T()) * value2) * rdata).data[0]));
-		writeln(bvalues[i+1]);
 	}
-	return minerror;
+	return bvalues[0];
 }
 
 double[] add(double[]data1, double[]data2){
@@ -316,7 +317,7 @@ interface IGaussNewton{
 	void addFuncs(DFUNC func);
 	IGaussNewton addVariableF(string name, float value);
 	string[] showVariables();
-	double run(double[]data, int iters);
+	double[] run(double[]data, int iters);
 }
 
 class GaussNewton:IGaussNewton {
@@ -341,6 +342,16 @@ class GaussNewton:IGaussNewton {
 		return new GaussNewton(variables);
 	}
 
+	//Output format is variable-value
+	void fromFile(string filename){
+		auto lines = cast(char[]) read(filename);
+		foreach(ref str; lines.split("\n")){
+			auto value = str.split();
+			this.addVariable(to!string(value[0]), to!float(value[1]));
+		}
+
+	}
+
 	//Add target function
 	void addFuncs(DFUNC func){
 		_func = func;
@@ -353,15 +364,13 @@ class GaussNewton:IGaussNewton {
 
 
 	//"heart" of this class. Run G-N algorithm
-	double run(double[]data, int iters){
+	double[] run(double[]data, int iters){
 		if(_func != null && variables.length > 0){
 			auto gens = generateOutputdata(_func, variables, 3);
 			return GaussNewtonImpl(iters, data, gens, variables, _func, epsilon);
 		}
-		return 0;
+		return new double[](1);
 	}
 }
-
-
 
 

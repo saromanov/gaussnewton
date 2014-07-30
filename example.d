@@ -39,11 +39,12 @@ void test_func_gauss_newton(){
 	gn.addVariableF("A",5.0)
 	  .addVariableF("B",3.0)
 	  .addVariableF("C",8.0);
-	gn.run(data, 20);
+	gn.addFuncs(&targetFunc);
+	writeln(gn.run(data, 20));
 }
 
-
-void main()
-{
-	test_func_gauss_newton();
+void test_gauss_newton_load(){
+	auto gn = new GaussNewton();
+	gn.fromFile("./data");
 }
+
