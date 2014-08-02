@@ -252,7 +252,7 @@ double[][] JacobianResult(double[][]matrix, double inputvalue, double setvalue){
 
 
 
-double[] GaussNewtonImpl(int iterations, double input[], double observed[], float[string] data,
+float[] GaussNewtonImpl(int iterations, float input[], double observed[], float[string] data,
 	double function(double, float[string]) func, float step)
 	in{
 		assert(input.length == observed.length);
@@ -263,19 +263,20 @@ double[] GaussNewtonImpl(int iterations, double input[], double observed[], floa
 	double[][] jacobi = new double[][](m, data.keys.length);
 	double result = 0;
 	double minerror = 10000000000;
-	double[][]bvalues = new double[][](iterations+1, iterations+1);
-	bvalues[0] = [0.85,0.50,-0.30];
-	for(int i = 0;i < iterations;++i){
+	float[][]bvalues = new float[][](iterations+1, iterations+1);
+	bvalues[0] = data.values.array;
+	int i = 0;
+	while(i < iterations){
 		auto param1 = new double[observed.length];
-		double[] rdata = new double[m];
+		float[] rdata = new float[m];
 		double error = 0;
 		auto vars1 = data.dup;
 		for(int j = 0;j < m;++j){
 			rdata[j] = observed[j] - func(input[j], data);
 			error += (rdata[j] * rdata[j]);
 			int c = 0;
-			foreach(key;data.keys){
-			 	vars1[key]  += STEP;
+			foreach(immutable key;data.keys){
+			 	vars1[key]  += step;
 				jacobi[j][c] = Derivative(input, func, vars1, data);
 				c += 1;
 			}
@@ -291,8 +292,9 @@ double[] GaussNewtonImpl(int iterations, double input[], double observed[], floa
 		//Parameters for update
 		//TODO fix m-v product
 		bvalues[i+1] = add(bvalues[i], ((((value2 * matr.T()) * value2) * rdata).data[0]));
+		i += 1;
 	}
-	return bvalues[0];
+	return bvalues[i];
 }
 
 double[] add(double[]data1, double[]data2){
@@ -364,12 +366,12 @@ class GaussNewton:IGaussNewton {
 
 
 	//"heart" of this class. Run G-N algorithm
-	double[] run(double[]data, int iters){
+	float[] run(float[]data, int iters){
 		if(_func != null && variables.length > 0){
 			auto gens = generateOutputdata(_func, variables, 3);
 			return GaussNewtonImpl(iters, data, gens, variables, _func, epsilon);
 		}
-		return new double[](1);
+		return new float[](1);
 	}
 }
 
