@@ -10,8 +10,9 @@ import std.conv;
 
 const float epsilon = 1e-4;
 const float STEP = 1e-5;
-alias float[string] VARS; //Variables
-alias double function(double, float[string]) DFUNC;
+alias double[string] VARS; //Variables
+alias double function(double, double[string]) DFUNC;
+alias double[] DATA;
 
 mixin template MatrixT (T){
 	alias T[][] MT; //Matrix type
@@ -252,23 +253,25 @@ double[][] JacobianResult(double[][]matrix, double inputvalue, double setvalue){
 
 
 
-float[] GaussNewtonImpl(int iterations, float input[], double observed[], float[string] data,
-	double function(double, float[string]) func, float step)
+DATA GaussNewtonImpl(int iterations, DATA input, double observed[], double[string] data,
+	double function(double, double[string]) func, double step, double differ=1e-6)
 	in{
-		assert(input.length == observed.length);
+		assert(data.keys.length == observed.length);
 	}
 	body{
 	int m = input.length;
 	auto matr = new Matrix(m);
+
+	//Append here Jacobian
 	double[][] jacobi = new double[][](m, data.keys.length);
 	double result = 0;
-	double minerror = 10000000000;
-	float[][]bvalues = new float[][](iterations+1, iterations+1);
-	bvalues[0] = data.values.array;
+	double lasterror = 10000000000;
+	auto params = data.values.array;
 	int i = 0;
 	while(i < iterations){
-		auto param1 = new double[observed.length];
-		float[] rdata = new float[m];
+		DATA rdata = new double[m];
+
+		//Current error
 		double error = 0;
 		auto vars1 = data.dup;
 		for(int j = 0;j < m;++j){
@@ -283,18 +286,28 @@ float[] GaussNewtonImpl(int iterations, float input[], double observed[], float[
 		}
 
 		matr = new Matrix(jacobi);
-		if(error < minerror){
-			minerror = error;
+		if(abs(error - lasterror) < differ) {
+			return data.values.array;
 		}
 		auto value = matr * matr.T();
 		auto value2 = value.inv();
 
-		//Parameters for update
-		//TODO fix m-v product
-		bvalues[i+1] = add(bvalues[i], ((((value2 * matr.T()) * value2) * rdata).data[0]));
+		/*if (m == func.length)
+			bvalues[i+1] = (matr.inv() * value2).data[0];// - func[0](bvalues[i][0], data);*/
+		params = add(params, ((((value2 * matr.T()) * value2) * rdata).data[0]));
 		i += 1;
+		data = updateVariables(data, params);
+		lasterror = error;
 	}
-	return bvalues[i];
+	return params;
+}
+
+double[string] updateVariables(double[string] variables, DATA newvalues){
+	foreach(immutable v,i; variables.keys){
+		variables[i] = newvalues[v];
+		writeln(newvalues);
+	}
+	return variables;
 }
 
 double[] add(double[]data1, double[]data2){
@@ -354,7 +367,7 @@ class GaussNewton:IGaussNewton {
 
 	}
 
-	//Add target function
+	//Add target function (Can be append several functions)
 	void addFuncs(DFUNC func){
 		_func = func;
 	}
@@ -366,12 +379,12 @@ class GaussNewton:IGaussNewton {
 
 
 	//"heart" of this class. Run G-N algorithm
-	float[] run(float[]data, int iters){
+	double[] run(double[]data, int iters){
 		if(_func != null && variables.length > 0){
 			auto gens = generateOutputdata(_func, variables, 3);
 			return GaussNewtonImpl(iters, data, gens, variables, _func, epsilon);
 		}
-		return new float[](1);
+		return new double[](1);
 	}
 }
 

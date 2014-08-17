@@ -24,7 +24,7 @@ double[] generateData(int count){
 
 
 void test_gauss_newton(){
-	auto data = [0.4,0.5,0.6];
+	auto data = [0.458,0.555,0.687];
 	auto gn = new GaussNewton();
 	gn.addVariable("A",5.0);
 	gn.addVariable("B",3.0);
@@ -34,11 +34,11 @@ void test_gauss_newton(){
 }
 
 void test_func_gauss_newton(){
-	auto data = [0.3,0.5,0.8];
+	auto data = [0.333,0.5587,0.8225];
 	auto gn = new GaussNewton();
-	gn.addVariableF("A",5.0)
-	  .addVariableF("B",3.0)
-	  .addVariableF("C",8.0);
+	gn.addVariableF("A",0.85)
+	  .addVariableF("B",0.99)
+	  .addVariableF("C",0.22);
 	gn.addFuncs(&targetFunc);
 	writeln(gn.run(data, 20));
 }
@@ -48,3 +48,9 @@ void test_gauss_newton_load(){
 	gn.fromFile("./data");
 }
 
+
+void main()
+{
+	test_func_gauss_newton();
+	//test_gauss_newton_load();
+}
