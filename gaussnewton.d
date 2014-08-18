@@ -72,11 +72,13 @@ mixin template MatrixT (T){
 	}
 
 
+	//Find minor of the matrix
 	MT minor(T[][] matrix){
 		T[][] result = new T[][](matrix.length, matrix.length);
-		for(int p = 0;p < matrix.length;++p){
-			for(int i = 0;i < matrix.length;++i){
-				T [][]arr = new T[][](matrix.length-1, matrix.length-1);
+		int len = matrix.length;
+		for(int p = 0;p < len;++p){
+			for(int i = 0;i < matrix[p].length;++i){
+				T [][]arr = new T[][](len-1, matrix[p].length-1);
 				T [] temp;
 				int a = 0;
 				for(int j = 0;j < matrix.length;++j){
@@ -215,7 +217,7 @@ class Matrix:IMatrix {
 
 	IMatrix T(){
 		mixin MatrixT!double;
-		return new Matrix(transpose(_data));
+		return new Matrix(_data);
 	}
 
 	//Compute Jacobian of Matrix
@@ -285,16 +287,24 @@ DATA GaussNewtonImpl(int iterations, DATA input, double observed[], double[strin
 			}
 		}
 
-		matr = new Matrix(jacobi);
+		error = error/m;
 		if(abs(error - lasterror) < differ) {
 			return data.values.array;
 		}
-		auto value = matr * matr.T();
+		matr = new Matrix(jacobi);
+		auto value = matr.T() * matr;
 		auto value2 = value.inv();
+		//writeln("Jacobi: ", matr.data, " ", val);
+		writeln("Prod1: ", matr.data);
+		writeln("Prod: ", value.data);
+		writeln("inv: ", value2.data);
 
 		/*if (m == func.length)
 			bvalues[i+1] = (matr.inv() * value2).data[0];// - func[0](bvalues[i][0], data);*/
+
+		//params + ((J^TJ)^-1) * J^T(func)
 		params = add(params, ((((value2 * matr.T()) * value2) * rdata).data[0]));
+		writeln("PAR: ", params);
 		i += 1;
 		data = updateVariables(data, params);
 		lasterror = error;
@@ -305,7 +315,6 @@ DATA GaussNewtonImpl(int iterations, DATA input, double observed[], double[strin
 double[string] updateVariables(double[string] variables, DATA newvalues){
 	foreach(immutable v,i; variables.keys){
 		variables[i] = newvalues[v];
-		writeln(newvalues);
 	}
 	return variables;
 }
