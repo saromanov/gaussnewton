@@ -286,28 +286,26 @@ DATA GaussNewtonImpl(int iterations, DATA input, double observed[], double[strin
 				c += 1;
 			}
 		}
-
 		error = error/m;
 		if(abs(error - lasterror) < differ) {
 			return data.values.array;
 		}
 		matr = new Matrix(jacobi);
-		auto value = matr.T() * matr;
+		auto value = new Matrix((matr).data);
 		auto value2 = value.inv();
-		//writeln("Jacobi: ", matr.data, " ", val);
-		writeln("Prod1: ", matr.data);
-		writeln("Prod: ", value.data);
-		writeln("inv: ", value2.data);
+		writeln("Jacobi: ", value.data);
+		writeln("INV: ", value2.data);
 
 		/*if (m == func.length)
 			bvalues[i+1] = (matr.inv() * value2).data[0];// - func[0](bvalues[i][0], data);*/
 
 		//params + ((J^TJ)^-1) * J^T(func)
-		params = add(params, ((((value2 * matr.T()) * value2) * rdata).data[0]));
+		/*params = add(params, ((((value2 * matr.T()) * value2) * rdata).data[0]));
 		writeln("PAR: ", params);
 		i += 1;
 		data = updateVariables(data, params);
-		lasterror = error;
+		lasterror = error;*/
+		break;
 	}
 	return params;
 }
