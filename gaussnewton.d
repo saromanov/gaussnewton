@@ -10,9 +10,9 @@ import std.conv;
 
 const float epsilon = 1e-4;
 const float STEP = 1e-5;
-alias double[string] VARS; //Variables
-alias double function(double, double[string]) DFUNC;
-alias double[] DATA;
+alias real[string] VARS; //Variables
+alias real function(real, real[string]) DFUNC;
+alias real[] DATA;
 
 mixin template MatrixT (T){
 	alias T[][] MT; //Matrix type
@@ -42,9 +42,15 @@ mixin template MatrixT (T){
 		T [][] result = new T[][](matrix.length, matrix[0].length);
 		for(int i = 0;i < matrix.length;++i){
 			for(int j = 0;j < matrix[i].length;++j){
-				double value = 0;
-				for(int k = 0;k < values[j].length;++k)
+				float value = 0;
+				for(int k = 0;k < values[j].length;++k){
+					auto dance = matrix[i][k] * values[k][j];
+					real one = matrix[i][k];
+					auto two = values[k][j];
+					if(dance >= 1 && dance <= 2)
+						write(one, " : ", two, " --- ", one * two, " ");
 					value += matrix[i][k] * values[k][j];
+				}
 				result[i][j] = value;
 			}
 		}
@@ -82,7 +88,7 @@ mixin template MatrixT (T){
 				T [] temp;
 				int a = 0;
 				for(int j = 0;j < matrix.length;++j){
-					for(int k = 0;k < matrix.length;++k){
+					for(int k = 0;k < matrix[j].length;++k){
 						if(k == i)k+=1;
 						if(j == p)j+=1;
 						if(k == matrix.length)break;
@@ -96,6 +102,7 @@ mixin template MatrixT (T){
 					}
 				}
 				result[p][i] = computeMinor(arr);
+				break;
 			}
 
 		}
@@ -217,7 +224,7 @@ class Matrix:IMatrix {
 
 	IMatrix T(){
 		mixin MatrixT!double;
-		return new Matrix(_data);
+		return new Matrix(transpose(_data));
 	}
 
 	//Compute Jacobian of Matrix
@@ -233,10 +240,10 @@ class Matrix:IMatrix {
 
 
 //http://en.wikipedia.org/wiki/Derivative
-double Derivative(double[]input, 
-	double function(double, VARS) func, VARS data1, VARS data2){
-	double result1 = func(input[0], data1);
-	double result2 = func(input[0], data2);
+real Derivative(DATA input, 
+	real function(real, VARS) func, VARS data1, VARS data2){
+	real result1 = func(input[0], data1);
+	real result2 = func(input[0], data2);
 	return (result1 - result2)/epsilon;
 }
 
@@ -255,23 +262,22 @@ double[][] JacobianResult(double[][]matrix, double inputvalue, double setvalue){
 
 
 
-DATA GaussNewtonImpl(int iterations, DATA input, double observed[], double[string] data,
-	double function(double, double[string]) func, double step, double differ=1e-6)
+DATA GaussNewtonImpl(int iterations, DATA input, DATA observed, real[string] data,
+	real function(real, real[string]) func, double step, double differ=1e-6)
 	in{
 		assert(data.keys.length == observed.length);
 	}
 	body{
 	int m = input.length;
-	auto matr = new Matrix(m);
 
 	//Append here Jacobian
-	double[][] jacobi = new double[][](m, data.keys.length);
+	auto jacobi = uninitializedArray!(real[][])(m, data.keys.length);
 	double result = 0;
 	double lasterror = 10000000000;
 	auto params = data.values.array;
 	int i = 0;
 	while(i < iterations){
-		DATA rdata = new double[m];
+		auto rdata = uninitializedArray!(real[])(m);
 
 		//Current error
 		double error = 0;
@@ -290,11 +296,21 @@ DATA GaussNewtonImpl(int iterations, DATA input, double observed[], double[strin
 		if(abs(error - lasterror) < differ) {
 			return data.values.array;
 		}
-		matr = new Matrix(jacobi);
-		auto value = new Matrix((matr).data);
-		auto value2 = value.inv();
-		writeln("Jacobi: ", value.data);
-		writeln("INV: ", value2.data);
+		auto f = [[0.946306, 0.854644, 1.18676], [2.13249, 2.04086, 2.37297], [3.31926, 3.22755, 3.55966]];
+		auto matr = new Matrix(f);
+		/*auto m2 = new Matrix(jacobi);
+
+		writeln("FIRST: ", (matr.T() * matr).data);
+		writeln("NEXT: ", (m2.T() * m2).data);*/
+		/*auto test1 = (matr.T() * matr).data;
+		auto test2 = (m2.T() * m2).data;
+		writeln();*/
+		double v1 = matr.data[0][2];
+		double v2 = jacobi[0][2];
+		writeln("TESTS: ", v1," : ", v2, " : ", v1 == v2);
+		
+		/*auto matr2 = (matr.T() * matr).inv().data;
+		auto tfg = ((m2.T() * m2).inv().data);*/
 
 		/*if (m == func.length)
 			bvalues[i+1] = (matr.inv() * value2).data[0];// - func[0](bvalues[i][0], data);*/
@@ -325,8 +341,8 @@ double[] add(double[]data1, double[]data2){
 }
 
 
-double[] generateOutputdata(double function(double, VARS) func, VARS data, int count){
-	double[]o = new double[count];
+DATA generateOutputdata(real function(real, VARS) func, VARS data, int count){
+	real[]o = new real[count];
 	for(int i = 0;i < count;++i){
 		o[i] = func(i, data);
 	}
@@ -339,7 +355,7 @@ interface IGaussNewton{
 	void addFuncs(DFUNC func);
 	IGaussNewton addVariableF(string name, float value);
 	string[] showVariables();
-	double[] run(double[]data, int iters);
+	DATA run(DATA data, int iters);
 }
 
 class GaussNewton:IGaussNewton {
@@ -386,12 +402,12 @@ class GaussNewton:IGaussNewton {
 
 
 	//"heart" of this class. Run G-N algorithm
-	double[] run(double[]data, int iters){
+	DATA run(DATA data, int iters){
 		if(_func != null && variables.length > 0){
 			auto gens = generateOutputdata(_func, variables, 3);
 			return GaussNewtonImpl(iters, data, gens, variables, _func, epsilon);
 		}
-		return new double[](1);
+		return new real[](1);
 	}
 }
 
